@@ -17,7 +17,7 @@ A [pi](https://github.com/marioechr/pi) extension that registers [Fireworks AI](
 Install directly from GitHub:
 
 ```bash
-pi install git:github.com/monotykamary/pi-fireworks-provider
+pi install git:github.com/jellydn/pi-fireworks-provider
 ```
 
 Then set your API key and run pi:
@@ -30,7 +30,7 @@ pi
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/monotykamary/pi-fireworks-provider.git
+   git clone https://github.com/jellydn/pi-fireworks-provider.git
    cd pi-fireworks-provider
    ```
 

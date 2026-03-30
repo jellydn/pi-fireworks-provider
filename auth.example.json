@@ -1,0 +1,6 @@
+{
+  "fireworks": {
+    "type": "api_key",
+    "key": "fw-REPLACE_WITH_YOUR_API_KEY"
+  }
+}

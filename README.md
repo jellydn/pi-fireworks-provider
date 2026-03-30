@@ -20,24 +20,55 @@ Install directly from GitHub:
 pi install git:github.com/jellydn/pi-fireworks-provider
 ```
 
-Then set your API key and run pi:
+Then configure your API key securely and run pi:
+
+**Method 1: Auth File (Most Secure)**
+
+Store your API key in pi's auth file (recommended):
+
+```bash
+mkdir -p ~/.pi/agent
+cat > ~/.pi/agent/auth.json << 'EOF'
+{
+  "fireworks": {
+    "type": "api_key",
+    "key": "your-api-key-here"
+  }
+}
+EOF
+chmod 600 ~/.pi/agent/auth.json
+pi
+```
+
+**Method 2: .env File**
+
+Create a `.env` file in your project directory:
+
+```bash
+echo "FIREWORKS_API_KEY=your-api-key-here" > .env
+chmod 600 .env
+node --env-file=.env $(which pi)
+```
+
+**Method 3: Environment Variable (Less Secure)**
+
 ```bash
 export FIREWORKS_API_KEY=your-api-key-here
 pi
 ```
 
+> ⚠️ **Security Warning**: Using `export` exposes your API key in shell history and process listings. Prefer Method 1 or 2 for better security.
+
 ### Option 2: Manual Clone
 
 1. Clone this repository:
+
    ```bash
    git clone https://github.com/jellydn/pi-fireworks-provider.git
    cd pi-fireworks-provider
    ```
 
-2. Set your Fireworks API key:
-   ```bash
-   export FIREWORKS_API_KEY=your-api-key-here
-   ```
+2. Configure your API key using one of the methods above.
 
 3. Run pi with the extension:
    ```bash
@@ -46,23 +77,24 @@ pi
 
 ## Available Models
 
-| Model | Type | Context | Max Tokens | Input Cost | Output Cost |
-|-------|------|---------|------------|------------|-------------|
-| DeepSeek V3.1 | Text | 164K | 164K | $0.56 | $1.68 |
-| DeepSeek V3.2 | Text | 160K | 160K | $0.56 | $1.68 |
-| GLM 4.5 | Text | 131K | 131K | $0.55 | $2.19 |
-| GLM 4.7 | Text | 198K | 198K | $0.60 | $2.20 |
-| GLM 5 | Text | 203K | 131K | $1.00 | $3.20 |
-| GLM 4.5 Air | Text | 131K | 131K | $0.22 | $0.88 |
-| GPT OSS 120B | Text | 131K | 33K | $0.15 | $0.60 |
-| GPT OSS 20B | Text | 131K | 33K | $0.05 | $0.20 |
-| Kimi K2 Instruct | Text | 128K | 16K | $1.00 | $3.00 |
-| Kimi K2 Thinking | Text | 256K | 256K | $0.60 | $2.50 |
-| Kimi K2.5 | Text + Image | 256K | 256K | $0.60 | $3.00 |
-| Kimi K2.5 Turbo | Text + Image | 256K | 256K | Free | Free |
-| MiniMax-M2.1 | Text | 200K | 200K | $0.30 | $1.20 |
-| MiniMax-M2.5 | Text | 197K | 197K | $0.30 | $1.20 |
-*Costs are per million tokens. Prices subject to change - check [fireworks.ai](https://fireworks.ai) for current pricing.*
+| Model            | Type         | Context | Max Tokens | Input Cost | Output Cost |
+| ---------------- | ------------ | ------- | ---------- | ---------- | ----------- |
+| DeepSeek V3.1    | Text         | 164K    | 164K       | $0.56      | $1.68       |
+| DeepSeek V3.2    | Text         | 160K    | 160K       | $0.56      | $1.68       |
+| GLM 4.5          | Text         | 131K    | 131K       | $0.55      | $2.19       |
+| GLM 4.7          | Text         | 198K    | 198K       | $0.60      | $2.20       |
+| GLM 5            | Text         | 203K    | 131K       | $1.00      | $3.20       |
+| GLM 4.5 Air      | Text         | 131K    | 131K       | $0.22      | $0.88       |
+| GPT OSS 120B     | Text         | 131K    | 33K        | $0.15      | $0.60       |
+| GPT OSS 20B      | Text         | 131K    | 33K        | $0.05      | $0.20       |
+| Kimi K2 Instruct | Text         | 128K    | 16K        | $1.00      | $3.00       |
+| Kimi K2 Thinking | Text         | 256K    | 256K       | $0.60      | $2.50       |
+| Kimi K2.5        | Text + Image | 256K    | 256K       | $0.60      | $3.00       |
+| Kimi K2.5 Turbo  | Text + Image | 256K    | 256K       | Free       | Free        |
+| MiniMax-M2.1     | Text         | 200K    | 200K       | $0.30      | $1.20       |
+| MiniMax-M2.5     | Text         | 197K    | 197K       | $0.30      | $1.20       |
+
+_Costs are per million tokens. Prices subject to change - check [fireworks.ai](https://fireworks.ai) for current pricing._
 
 ## Usage
 
@@ -74,21 +106,81 @@ After loading the extension, use the `/model` command in pi to select your prefe
 
 Then select "fireworks" as the provider and choose from the available models.
 
-## Environment Variables
+## Environment Variables & Configuration
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `FIREWORKS_API_KEY` | Yes | Your Fireworks AI API key |
+### API Key Storage Methods
 
-## Configuration
+The pi framework supports multiple secure methods for storing your Fireworks API key:
+
+| Method               | Location                | Security                    | Persistence      |
+| -------------------- | ----------------------- | --------------------------- | ---------------- |
+| Auth File            | `~/.pi/agent/auth.json` | High (file permissions)     | Permanent        |
+| .env File            | `./.env`                | Medium (file permissions)   | Project-specific |
+| Environment Variable | Shell environment       | Low (visible in history/ps) | Session-only     |
+
+### Auth File (Recommended)
+
+Create `~/.pi/agent/auth.json` with your API key:
+
+```json
+{
+  "fireworks": {
+    "type": "api_key",
+    "key": "fw-xxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+**Important**: Set restrictive permissions:
+
+```bash
+chmod 600 ~/.pi/agent/auth.json
+```
+
+### .env File
+
+Create a `.env` file in your project root:
+
+```bash
+FIREWORKS_API_KEY=fw-xxxxxxxxxxxxxxxx
+```
+
+Then run pi with the `--env-file` flag:
+
+```bash
+node --env-file=.env $(which pi)
+```
+
+**Important**: Add `.env` to your `.gitignore`:
+
+```bash
+echo ".env" >> .gitignore
+chmod 600 .env
+```
+
+### Environment Variable
+
+For one-time use or temporary access:
+
+```bash
+export FIREWORKS_API_KEY=fw-xxxxxxxxxxxxxxxx
+pi
+```
+
+> **Security Note**: This method exposes your key in shell history and process listings. Clear your history after use:
+>
+> ```bash
+> history -c  # bash/zsh
+> unset FIREWORKS_API_KEY  # Remove from current session
+> ```
+
+### Configuration
 
 Add to your pi configuration for automatic loading:
 
 ```json
 {
-  "extensions": [
-    "/path/to/pi-fireworks-provider"
-  ]
+  "extensions": ["/path/to/pi-fireworks-provider"]
 }
 ```
 

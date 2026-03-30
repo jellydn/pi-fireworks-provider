@@ -51,7 +51,7 @@ function getInputTypes(modalities) {
   const types = modalities?.input || ['text'];
   const hasImage = types.includes('image');
   const hasText = types.includes('text');
-  
+
   if (hasImage && hasText) return 'Text + Image';
   if (hasImage) return 'Image';
   return 'Text';
@@ -62,7 +62,7 @@ function generateModelEntry(model) {
   const inputTypes = model.modalities?.input || ['text'];
   const cost = model.cost || {};
   const limit = model.limit || {};
-  
+
   return `{
 			id: "${model.id}",
 			name: "${model.name}",
@@ -82,7 +82,7 @@ function generateModelEntry(model) {
 // Generate index.ts content
 function generateIndexTS(models) {
   const modelEntries = models.map(m => '\t\t' + generateModelEntry(m)).join(',\n');
-  
+
   return `/**
  * Fireworks Provider Extension
  *
@@ -119,7 +119,7 @@ ${modelEntries}
 function generateReadmeRow(model) {
   const cost = model.cost || {};
   const limit = model.limit || {};
-  
+
   return `| ${model.name} | ${getInputTypes(model.modalities)} | ${formatNumber(limit.context || 0)} | ${formatNumber(limit.output || 0)} | ${formatCost(cost.input || 0)} | ${formatCost(cost.output || 0)} |`;
 }
 
@@ -127,7 +127,7 @@ function generateReadmeRow(model) {
 function updateReadme(models) {
   const readmePath = path.join(process.cwd(), 'README.md');
   let readme = fs.readFileSync(readmePath, 'utf8');
-  
+
   // Sort models by family and name
   const sortedModels = [...models].sort((a, b) => {
     const familyA = a.family || '';
@@ -135,52 +135,52 @@ function updateReadme(models) {
     if (familyA !== familyB) return familyA.localeCompare(familyB);
     return a.name.localeCompare(b.name);
   });
-  
+
   // Generate table rows
   const tableRows = sortedModels.map(generateReadmeRow).join('\n');
   const newTable = `| Model | Type | Context | Max Tokens | Input Cost | Output Cost |
 |-------|------|---------|------------|------------|-------------|
 ${tableRows}`;
-  
+
   // Replace table in README
   const tableRegex = /\| Model \| Type \| Context \| Max Tokens \| Input Cost \| Output Cost \|[\s\S]*?(?=\n\*Costs are per million)/;
   readme = readme.replace(tableRegex, newTable);
-  
+
   // Update model count in features
   readme = readme.replace(/\*\*\d+\+ AI Models\*\*/, `**${models.length}+ AI Models**`);
-  
+
   fs.writeFileSync(readmePath, readme);
   console.log(`✓ Updated README.md with ${models.length} models`);
 }
 
 async function main() {
   console.log('Fetching models from API...');
-  
+
   try {
     const data = await fetchJSON(API_URL);
     const provider = data[PROVIDER_ID];
-    
+
     if (!provider) {
       throw new Error(`Provider "${PROVIDER_ID}" not found in API`);
     }
-    
+
     if (!provider.models) {
       throw new Error(`No models found for provider "${PROVIDER_ID}"`);
     }
-    
+
     // Convert models object to array and filter out deprecated
     const models = Object.values(provider.models).filter(m => m.status !== 'deprecated');
-    
+
     console.log(`Found ${models.length} active models`);
-    
+
     // Generate and write index.ts
     const indexContent = generateIndexTS(models);
     fs.writeFileSync(path.join(process.cwd(), 'index.ts'), indexContent);
     console.log('✓ Updated index.ts');
-    
+
     // Update README
     updateReadme(models);
-    
+
     console.log('\nDone!');
   } catch (error) {
     console.error('Error:', error.message);

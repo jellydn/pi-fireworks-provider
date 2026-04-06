@@ -15,6 +15,7 @@ const __dirname = path.dirname(__filename);
 
 const API_URL = 'https://models.dev/api.json';
 const PROVIDER_ID = 'fireworks-ai';
+const CUSTOM_MODELS_PATH = path.join(process.cwd(), 'custom-models.json');
 
 // Fetch JSON from URL
 function fetchJSON(url) {
@@ -33,14 +34,49 @@ function fetchJSON(url) {
   });
 }
 
-// Format cost for display
+// Load custom models from JSON file
+function loadCustomModels() {
+  try {
+    if (!fs.existsSync(CUSTOM_MODELS_PATH)) {
+      return [];
+    }
+    const data = fs.readFileSync(CUSTOM_MODELS_PATH, 'utf8');
+    const models = JSON.parse(data);
+    console.log(`✓ Loaded ${models.length} custom models`);
+    return models;
+  } catch (error) {
+    console.warn('Warning: Could not load custom models:', error.message);
+    return [];
+  }
+}
+
+// Merge upstream and custom models (custom takes precedence on ID conflict)
+function mergeModels(upstreamModels, customModels) {
+  const modelMap = new Map();
+  
+  // Add upstream models first
+  for (const model of upstreamModels) {
+    modelMap.set(model.id, model);
+  }
+  
+  // Add/override with custom models
+  for (const model of customModels) {
+    modelMap.set(model.id, model);
+  }
+  
+  return Array.from(modelMap.values());
+}
+
+// Format cost for display (handles null/undefined)
 function formatCost(cost) {
+  if (cost === null || cost === undefined) return '-';
   if (cost === 0) return 'Free';
   return `$${cost.toFixed(2)}`;
 }
 
-// Format number with K/M suffix
+// Format number with K/M suffix (handles null/undefined)
 function formatNumber(num) {
+  if (num === null || num === undefined) return '-';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
   return num.toString();
@@ -63,20 +99,24 @@ function generateModelEntry(model) {
   const cost = model.cost || {};
   const limit = model.limit || {};
   
+  // Handle null/undefined limits (use 0 as fallback)
+  const contextWindow = limit.context ?? 0;
+  const maxTokens = limit.output ?? 0;
+  
   return `{
-			id: "${model.id}",
-			name: "${model.name}",
-			reasoning: ${model.reasoning || false},
-			input: ${JSON.stringify(inputTypes)},
-			cost: {
-				input: ${cost.input || 0},
-				output: ${cost.output || 0},
-				cacheRead: ${cost.cache_read || 0},
-				cacheWrite: ${cost.cache_write || 0},
-			},
-			contextWindow: ${limit.context || 0},
-			maxTokens: ${limit.output || 0},
-		}`;
+		id: "${model.id}",
+		name: "${model.name}",
+		reasoning: ${model.reasoning || false},
+		input: ${JSON.stringify(inputTypes)},
+		cost: {
+			input: ${cost.input ?? 0},
+			output: ${cost.output ?? 0},
+			cacheRead: ${cost.cache_read ?? cost.cacheRead ?? 0},
+			cacheWrite: ${cost.cache_write ?? cost.cacheWrite ?? 0},
+		},
+		contextWindow: ${contextWindow},
+		maxTokens: ${maxTokens},
+	}`;
 }
 
 // Generate index.ts content
@@ -120,7 +160,7 @@ function generateReadmeRow(model) {
   const cost = model.cost || {};
   const limit = model.limit || {};
   
-  return `| ${model.name} | ${getInputTypes(model.modalities)} | ${formatNumber(limit.context || 0)} | ${formatNumber(limit.output || 0)} | ${formatCost(cost.input || 0)} | ${formatCost(cost.output || 0)} |`;
+  return `| ${model.name} | ${getInputTypes(model.modalities)} | ${formatNumber(limit.context)} | ${formatNumber(limit.output)} | ${formatCost(cost.input)} | ${formatCost(cost.output)} |`;
 }
 
 // Update README model table
@@ -169,9 +209,13 @@ async function main() {
     }
     
     // Convert models object to array and filter out deprecated
-    const models = Object.values(provider.models).filter(m => m.status !== 'deprecated');
+    const upstreamModels = Object.values(provider.models).filter(m => m.status !== 'deprecated');
     
-    console.log(`Found ${models.length} active models`);
+    // Load and merge custom models
+    const customModels = loadCustomModels();
+    const models = mergeModels(upstreamModels, customModels);
+    
+    console.log(`Found ${upstreamModels.length} upstream models, ${models.length} total after merge`);
     
     // Generate and write index.ts
     const indexContent = generateIndexTS(models);

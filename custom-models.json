@@ -1,0 +1,29 @@
+[
+  {
+    "id": "accounts/fireworks/models/qwen3p6-plus",
+    "name": "Qwen 3.6 Plus",
+    "reasoning": false,
+    "modalities": { "input": ["text", "image"] },
+    "cost": { "input": 0.5, "output": 3.0, "cache_read": 0.1, "cache_write": 0 },
+    "limit": { "context": null, "output": null },
+    "_custom": true
+  },
+  {
+    "id": "accounts/fireworks/models/gemma-4-31b-it",
+    "name": "Gemma 4 31B IT",
+    "reasoning": true,
+    "modalities": { "input": ["text", "image"] },
+    "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+    "limit": { "context": 262000, "output": null },
+    "_custom": false
+  },
+  {
+    "id": "accounts/fireworks/models/gemma-4-26b-a4b-it",
+    "name": "Gemma 4 26B A4B IT",
+    "reasoning": true,
+    "modalities": { "input": ["text", "image"] },
+    "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
+    "limit": { "context": 262000, "output": null },
+    "_custom": false
+  }
+]

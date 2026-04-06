@@ -47,5 +47,5 @@ jobs:
             Changes include:
             - Updated model list in `index.ts`
             - Updated model table in `README.md`
-          branch: update-models-${{ github.run_id }}
+          branch: update-models
           delete-branch: true

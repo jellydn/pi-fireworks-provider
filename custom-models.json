@@ -1,5 +1,25 @@
 [
   {
+    "id": "accounts/fireworks/routers/glm-5-fast",
+    "name": "GLM 5 Fast",
+    "reasoning": true,
+    "modalities": {
+      "input": [
+        "text"
+      ]
+    },
+    "cost": {
+      "input": 1,
+      "output": 3.2,
+      "cache_read": 0.5,
+      "cache_write": 0
+    },
+    "limit": {
+      "context": 202752,
+      "output": 131072
+    }
+  },
+  {
     "id": "accounts/fireworks/models/qwen3p6-plus",
     "name": "Qwen 3.6 Plus",
     "reasoning": false,

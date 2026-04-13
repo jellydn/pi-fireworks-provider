@@ -1,5 +1,24 @@
 [
   {
+    "id": "accounts/fireworks/routers/glm-5-fast",
+    "name": "GLM 5 Fast",
+    "reasoning": true,
+    "modalities": {
+      "input": [
+        "text"
+      ]
+    },
+    "cost": {
+      "input": 1,
+      "output": 3.2,
+      "cache_read": 0.5
+    },
+    "limit": {
+      "context": 202752,
+      "output": 131072
+    }
+  },
+  {
     "id": "accounts/fireworks/models/minimax-m2p7",
     "name": "MiniMax M2.7",
     "reasoning": true,

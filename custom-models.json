@@ -1,5 +1,43 @@
 [
   {
+    "id": "accounts/fireworks/routers/glm-5p1-fast",
+    "name": "GLM 5.1 Fast (firepass)",
+    "reasoning": true,
+    "modalities": {
+      "input": [
+        "text"
+      ]
+    },
+    "cost": {
+      "input": 1.4,
+      "output": 4.4,
+      "cache_read": 0.26
+    },
+    "limit": {
+      "context": 202800,
+      "output": 131072
+    }
+  },
+  {
+    "id": "accounts/fireworks/routers/minimax-m2p7",
+    "name": "MiniMax M2.7 (firepass)",
+    "reasoning": true,
+    "modalities": {
+      "input": [
+        "text"
+      ]
+    },
+    "cost": {
+      "input": 0.30,
+      "output": 1.20,
+      "cache_read": 0.06
+    },
+    "limit": {
+      "context": 204000,
+      "output": null
+    }
+  },
+  {
     "id": "accounts/fireworks/routers/glm-5-fast",
     "name": "GLM 5 Fast",
     "reasoning": true,

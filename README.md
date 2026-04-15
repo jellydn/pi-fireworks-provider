@@ -4,7 +4,7 @@ A [pi](https://github.com/marioechr/pi) extension that registers [Fireworks AI](
 
 ## Features
 
-- **20+ AI Models** including Kimi K2.5, MiniMax M2.5, GLM 4.5/4.7/5, DeepSeek V3.1/V3.2, and GPT-OSS
+- **22+ AI Models** including Kimi K2.5, MiniMax M2.5, GLM 4.5/4.7/5, DeepSeek V3.1/V3.2, and GPT-OSS
 - **Unified API** via Fireworks AI's OpenAI-compatible completions endpoint
 - **Cost Tracking** with per-model pricing for budget management
 - **Reasoning Models** support for advanced reasoning capabilities
@@ -51,7 +51,8 @@ pi
 | Gemma 4 26B A4B IT | Text + Image | 262K | - | Free | Free |
 | Gemma 4 31B IT | Text + Image | 262K | - | Free | Free |
 | GLM 5 Fast | Text | 203K | 131K | $1.00 | $3.20 |
-| MiniMax M2.7 | Text | 204K | - | $0.30 | $1.20 |
+| GLM 5.1 Fast (firepass) | Text | 203K | 131K | $1.40 | $4.40 |
+| MiniMax M2.7 (firepass) | Text | 204K | - | $0.30 | $1.20 |
 | DeepSeek V3.1 | Text | 164K | 164K | $0.56 | $1.68 |
 | DeepSeek V3.2 | Text | 160K | 160K | $0.56 | $1.68 |
 | GLM 4.5 | Text | 131K | 131K | $0.55 | $2.19 |
@@ -67,6 +68,7 @@ pi
 | Kimi K2.5 Turbo (firepass) | Text + Image | 256K | 256K | Free | Free |
 | MiniMax-M2.1 | Text | 200K | 200K | $0.30 | $1.20 |
 | MiniMax-M2.5 | Text | 197K | 197K | $0.30 | $1.20 |
+| MiniMax-M2.7 | Text | 197K | 197K | $0.30 | $1.20 |
 | Qwen 3.6 Plus | Text + Image | 128K | 8K | $0.50 | $3.00 |
 *Costs are per million tokens. Prices subject to change - check [fireworks.ai](https://fireworks.ai) for current pricing.*
 

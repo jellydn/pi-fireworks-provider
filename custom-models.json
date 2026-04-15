@@ -60,26 +60,6 @@
     }
   },
   {
-    "id": "accounts/fireworks/models/minimax-m2p7",
-    "name": "MiniMax M2.7",
-    "reasoning": true,
-    "modalities": {
-      "input": [
-        "text"
-      ]
-    },
-    "cost": {
-      "input": 0.3,
-      "output": 1.2,
-      "cache_read": 0.06,
-      "cache_write": 0
-    },
-    "limit": {
-      "context": 204000,
-      "output": null
-    }
-  },
-  {
     "id": "accounts/fireworks/models/gemma-4-31b-it",
     "name": "Gemma 4 31B IT",
     "reasoning": true,

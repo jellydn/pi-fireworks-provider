@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "vitest": "^3.0.0"
   },
   "keywords": [
@@ -29,6 +30,9 @@
   ],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=20.10.0"
+  },
   "pi": {
     "extensions": [
       "./index.ts"

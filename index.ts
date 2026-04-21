@@ -57,19 +57,20 @@ interface PiModel {
 // Transform JSON model to Pi's expected format
 function transformModel(m: JsonModel): PiModel {
   const c = m.cost ?? {};
+  const l = m.limit ?? {};
   return {
     id: m.id,
     name: m.name,
     reasoning: m.reasoning,
-    input: m.modalities.input,
+    input: m.modalities?.input ?? ['text'],
     cost: {
       input: c.input ?? 0,
       output: c.output ?? 0,
       cacheRead: c.cache_read ?? 0,
       cacheWrite: c.cache_write ?? 0,
     },
-    contextWindow: m.limit.context ?? 0,
-    maxTokens: m.limit.output ?? m.limit.context ?? 0,
+    contextWindow: l.context ?? 0,
+    maxTokens: l.output ?? l.context ?? 0,
   };
 }
 

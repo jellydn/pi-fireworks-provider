@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+// @ts-check
 /**
  * Script to update fireworks models from models.dev API
  * Updates models.json (regular models) and README.md
@@ -19,16 +19,42 @@ const PROVIDER_ID = 'fireworks-ai';
 const MODELS_PATH = path.join(__dirname, '..', 'models.json');
 const CUSTOM_MODELS_PATH = path.join(__dirname, '..', 'custom-models.json');
 
+/**
+ * @typedef {Object} ModelCost
+ * @property {number} [input]
+ * @property {number} [output]
+ * @property {number} [cache_read]
+ * @property {number} [cache_write]
+ */
+
+/**
+ * @typedef {Object} ModelLimit
+ * @property {number|null} [context]
+ * @property {number|null} [output]
+ */
+
+/**
+ * @typedef {Object} Model
+ * @property {string} id
+ * @property {string} name
+ * @property {string} [status]
+ * @property {string} [family]
+ * @property {ModelCost} [cost]
+ * @property {ModelLimit} [limit]
+ * @property {{input?: string[]}} [modalities]
+ */
+
 // Fetch JSON from URL
+/** @param {string} url */
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', (/** @type {string} */ chunk) => data += chunk);
       res.on('end', () => {
         try {
           resolve(JSON.parse(data));
-        } catch (e) {
+        } catch (/** @type {any} */ e) {
           reject(new Error(`Failed to parse JSON: ${e.message}`));
         }
       });
@@ -37,6 +63,7 @@ function fetchJSON(url) {
 }
 
 // Load models from JSON file
+/** @param {string} filePath */
 function loadModels(filePath) {
   if (!fs.existsSync(filePath)) {
     return [];
@@ -50,21 +77,24 @@ function loadModels(filePath) {
     }
     console.log(`✓ Loaded ${models.length} models from ${path.basename(filePath)}`);
     return models;
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     throw new Error(`Could not load ${path.basename(filePath)}: ${error.message}`);
   }
 }
 
 // Save models to JSON file
-function saveModels(filePath, models) {
+/** @param {string} filePath */
+function saveModels(filePath, /** @type {Model[]} */ models) {
   fs.writeFileSync(filePath, JSON.stringify(models, null, 2) + '\n');
   console.log(`✓ Saved ${models.length} models to ${path.basename(filePath)}`);
 }
 
+/** @param {any} a @param {any} b */
 function modelsAreEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+/** @param {Model[]} upstream @param {Model[]} custom */
 function findDuplicateCustomModels(upstream, custom) {
   const byId = new Map(upstream.map(m => [m.id, m]));
   return custom.filter(m => {
@@ -73,6 +103,7 @@ function findDuplicateCustomModels(upstream, custom) {
   });
 }
 
+/** @param {Model[]} upstream @param {Model[]} custom */
 function findConflictingCustomModels(upstream, custom) {
   const byId = new Map(upstream.map(m => [m.id, m]));
   return custom.filter(m => {
@@ -81,11 +112,13 @@ function findConflictingCustomModels(upstream, custom) {
   });
 }
 
+/** @param {Model[]} custom @param {Model[]} duplicates */
 function removeDuplicateCustomModels(custom, duplicates) {
   const ids = new Set(duplicates.map(m => m.id));
   return custom.filter(m => !ids.has(m.id));
 }
 
+/** @param {Model[]} upstream @param {Model[]} custom */
 function mergeModels(upstream, custom) {
   const byId = new Map();
   for (const m of upstream) byId.set(m.id, m);
@@ -93,12 +126,14 @@ function mergeModels(upstream, custom) {
   return Array.from(byId.values());
 }
 
+/** @param {number|null|undefined} cost */
 function formatCost(cost) {
   if (cost == null) return '-';
   if (cost === 0) return 'Free';
   return `$${cost.toFixed(2)}`;
 }
 
+/** @param {number|null|undefined} num */
 function formatNumber(num) {
   if (num == null) return '-';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -106,6 +141,7 @@ function formatNumber(num) {
   return String(num);
 }
 
+/** @param {{input?: string[]}|undefined} modalities */
 function getInputTypes(modalities) {
   const types = modalities?.input ?? ['text'];
   const labels = [];
@@ -115,13 +151,14 @@ function getInputTypes(modalities) {
   return labels.join(' + ') || 'Text';
 }
 
-
+/** @param {Model} m */
 function generateReadmeRow(m) {
   const c = m.cost ?? {};
   const l = m.limit ?? {};
   return `| ${m.name} | ${getInputTypes(m.modalities)} | ${formatNumber(l.context)} | ${formatNumber(l.output)} | ${formatCost(c.input)} | ${formatCost(c.output)} |`;
 }
 
+/** @param {Model[]} models */
 function updateReadme(models) {
   const readmePath = path.join(process.cwd(), 'README.md');
   let readme = fs.readFileSync(readmePath, 'utf8');
@@ -165,22 +202,43 @@ async function main() {
     const upstreamModels = Object.values(provider.models).filter(m => m.status !== 'deprecated');
     console.log(`Found ${upstreamModels.length} upstream models from API`);
 
-    const customModels = loadModels(CUSTOM_MODELS_PATH);
+    let customModels = loadModels(CUSTOM_MODELS_PATH);
+
+    // Helper to normalize cost fields on a model; returns true if changes were made
+    function normalizeModelCost(m) {
+      let changed = false;
+      if (m.cost == null) {
+        m.cost = {};
+        changed = true;
+      }
+      if (m.cost.input == null) {
+        m.cost.input = 0;
+        changed = true;
+      }
+      if (m.cost.output == null) {
+        m.cost.output = 0;
+        changed = true;
+      }
+      if (m.cost.cache_read == null) {
+        m.cost.cache_read = 0;
+        changed = true;
+      }
+      if (m.cost.cache_write == null) {
+        m.cost.cache_write = 0;
+        changed = true;
+      }
+      return changed;
+    }
 
     // Ensure all cost fields exist (prevents NaN in pi cost calculations)
     for (const m of upstreamModels) {
-      m.cost ??= {};
-      m.cost.input ??= 0;
-      m.cost.output ??= 0;
-      m.cost.cache_read ??= 0;
-      m.cost.cache_write ??= 0;
+      normalizeModelCost(m);
     }
+    let customModelsChanged = false;
     for (const m of customModels) {
-      m.cost ??= {};
-      m.cost.input ??= 0;
-      m.cost.output ??= 0;
-      m.cost.cache_read ??= 0;
-      m.cost.cache_write ??= 0;
+      if (normalizeModelCost(m)) {
+        customModelsChanged = true;
+      }
     }
 
     // Find exact duplicates and conflicts
@@ -205,6 +263,11 @@ async function main() {
       }
     }
 
+    // Persist normalized custom models if they changed but weren't saved above
+    if (customModelsChanged && duplicates.length === 0) {
+      saveModels(CUSTOM_MODELS_PATH, customModels);
+    }
+
     // Save upstream models to models.json (regular models)
     saveModels(MODELS_PATH, upstreamModels);
 
@@ -215,7 +278,7 @@ async function main() {
     // Update README with merged models
     updateReadme(allModels);
     console.log('\nDone!');
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.error('Error:', error.message);
     process.exit(1);
   }

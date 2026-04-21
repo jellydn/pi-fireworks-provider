@@ -7,7 +7,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": []
+    "checkJs": true,
+    "types": ["node"]
   },
-  "include": ["*.ts", "types.d.ts"]
+  "include": ["*.ts", "*.js", "types.d.ts"]
 }

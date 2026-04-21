@@ -113,6 +113,7 @@ function getInputTypes(modalities) {
   return 'Text';
 }
 
+
 // Generate README model table row
 function generateReadmeRow(model) {
   const cost = model.cost || {};
@@ -219,7 +220,6 @@ async function main() {
 
     // Update README with merged models
     updateReadme(allModels);
-
     console.log('\nDone!');
   } catch (error) {
     console.error('Error:', error.message);

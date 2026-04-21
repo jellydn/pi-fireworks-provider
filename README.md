@@ -17,27 +17,58 @@ A [pi](https://github.com/marioechr/pi) extension that registers [Fireworks AI](
 Install directly from GitHub:
 
 ```bash
-pi install git:github.com/monotykamary/pi-fireworks-provider
+pi install git:github.com/jellydn/pi-fireworks-provider
 ```
 
-Then set your API key and run pi:
+Then configure your API key securely and run pi:
+
+**Method 1: Auth File (Most Secure)**
+
+Store your API key in pi's auth file (recommended):
+
+```bash
+mkdir -p ~/.pi/agent
+cat > ~/.pi/agent/auth.json << 'EOF'
+{
+  "fireworks": {
+    "type": "api_key",
+    "key": "your-api-key-here"
+  }
+}
+EOF
+chmod 600 ~/.pi/agent/auth.json
+pi
+```
+
+**Method 2: .env File**
+
+Create a `.env` file in your project directory:
+
+```bash
+echo "FIREWORKS_API_KEY=your-api-key-here" > .env
+chmod 600 .env
+node --env-file=.env $(which pi)
+```
+
+**Method 3: Environment Variable (Less Secure)**
+
 ```bash
 export FIREWORKS_API_KEY=your-api-key-here
 pi
 ```
 
+> ⚠️ **Security Warning**: Using `export` exposes your API key in shell history and process listings. Prefer Method 1 or 2 for better security.
+
 ### Option 2: Manual Clone
 
 1. Clone this repository:
+
    ```bash
-   git clone https://github.com/monotykamary/pi-fireworks-provider.git
+   git clone https://github.com/jellydn/pi-fireworks-provider.git
    cd pi-fireworks-provider
    ```
 
-2. Set your Fireworks API key:
-   ```bash
-   export FIREWORKS_API_KEY=your-api-key-here
-   ```
+2. Configure your API key using one of the methods above.
 
 3. Run pi with the extension:
    ```bash
@@ -82,21 +113,81 @@ After loading the extension, use the `/model` command in pi to select your prefe
 
 Then select "fireworks" as the provider and choose from the available models.
 
-## Environment Variables
+## Environment Variables & Configuration
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `FIREWORKS_API_KEY` | Yes | Your Fireworks AI API key |
+### API Key Storage Methods
 
-## Configuration
+The pi framework supports multiple secure methods for storing your Fireworks API key:
+
+| Method               | Location                | Security                    | Persistence      |
+| -------------------- | ----------------------- | --------------------------- | ---------------- |
+| Auth File            | `~/.pi/agent/auth.json` | High (file permissions)     | Permanent        |
+| .env File            | `./.env`                | Medium (file permissions)   | Project-specific |
+| Environment Variable | Shell environment       | Low (visible in history/ps) | Session-only     |
+
+### Auth File (Recommended)
+
+Create `~/.pi/agent/auth.json` with your API key:
+
+```json
+{
+  "fireworks": {
+    "type": "api_key",
+    "key": "fw-xxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+**Important**: Set restrictive permissions:
+
+```bash
+chmod 600 ~/.pi/agent/auth.json
+```
+
+### .env File
+
+Create a `.env` file in your project root:
+
+```bash
+FIREWORKS_API_KEY=fw-xxxxxxxxxxxxxxxx
+```
+
+Then run pi with the `--env-file` flag:
+
+```bash
+node --env-file=.env $(which pi)
+```
+
+**Important**: Add `.env` to your `.gitignore`:
+
+```bash
+echo ".env" >> .gitignore
+chmod 600 .env
+```
+
+### Environment Variable
+
+For one-time use or temporary access:
+
+```bash
+export FIREWORKS_API_KEY=fw-xxxxxxxxxxxxxxxx
+pi
+```
+
+> **Security Note**: This method exposes your key in shell history and process listings. Clear your history after use:
+>
+> ```bash
+> history -c  # bash/zsh
+> unset FIREWORKS_API_KEY  # Remove from current session
+> ```
+
+### Configuration
 
 Add to your pi configuration for automatic loading:
 
 ```json
 {
-  "extensions": [
-    "/path/to/pi-fireworks-provider"
-  ]
+  "extensions": ["/path/to/pi-fireworks-provider"]
 }
 ```
 

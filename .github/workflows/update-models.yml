@@ -3,7 +3,7 @@ name: Update Models
 on:
   schedule:
     # Run daily at 00:00 UTC
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Fetch and update models
         run: node scripts/update-models.js
@@ -39,8 +39,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'feat: update fireworks models from API'
-          title: 'feat: update fireworks models from API'
+          commit-message: "feat: update fireworks models from API"
+          title: "feat: update fireworks models from API"
           body: |
             Automated update of fireworks models from https://models.dev/api.json
 

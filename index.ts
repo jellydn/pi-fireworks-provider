@@ -70,7 +70,8 @@ function transformModel(model: JsonModel): PiModel {
       cacheWrite: cost.cache_write ?? 0,
     },
     contextWindow: model.limit.context ?? 0,
-    maxTokens: model.limit.output ?? 0,
+    // Use context window as fallback for maxTokens when output limit is null
+    maxTokens: model.limit.output ?? model.limit.context ?? 0,
   };
 }
 

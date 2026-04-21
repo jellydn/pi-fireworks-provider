@@ -16,8 +16,8 @@ const __dirname = path.dirname(__filename);
 
 const API_URL = 'https://models.dev/api.json';
 const PROVIDER_ID = 'fireworks-ai';
-const MODELS_PATH = path.join(process.cwd(), 'models.json');
-const CUSTOM_MODELS_PATH = path.join(process.cwd(), 'custom-models.json');
+const MODELS_PATH = path.join(__dirname, '..', 'models.json');
+const CUSTOM_MODELS_PATH = path.join(__dirname, '..', 'custom-models.json');
 
 // Fetch JSON from URL
 function fetchJSON(url) {
@@ -38,17 +38,20 @@ function fetchJSON(url) {
 
 // Load models from JSON file
 function loadModels(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return [];
+  }
+
   try {
-    if (!fs.existsSync(filePath)) {
-      return [];
-    }
     const data = fs.readFileSync(filePath, 'utf8');
     const models = JSON.parse(data);
+    if (!Array.isArray(models)) {
+      throw new Error('Expected a JSON array');
+    }
     console.log(`✓ Loaded ${models.length} models from ${path.basename(filePath)}`);
     return models;
   } catch (error) {
-    console.warn(`Warning: Could not load ${path.basename(filePath)}:`, error.message);
-    return [];
+    throw new Error(`Could not load ${path.basename(filePath)}: ${error.message}`);
   }
 }
 
@@ -58,13 +61,30 @@ function saveModels(filePath, models) {
   console.log(`✓ Saved ${models.length} models to ${path.basename(filePath)}`);
 }
 
-// Find custom models that now exist in upstream (duplicates to remove)
-function findDuplicateCustomModels(upstreamModels, customModels) {
-  const upstreamIds = new Set(upstreamModels.map(m => m.id));
-  return customModels.filter(model => upstreamIds.has(model.id));
+// Deep equality check for model objects
+function modelsAreEqual(modelA, modelB) {
+  return JSON.stringify(modelA) === JSON.stringify(modelB);
 }
 
-// Remove duplicate models from custom-models.json
+// Find exact duplicate custom models (same id AND same content)
+function findDuplicateCustomModels(upstreamModels, customModels) {
+  const upstreamMap = new Map(upstreamModels.map(m => [m.id, m]));
+  return customModels.filter(custom => {
+    const upstream = upstreamMap.get(custom.id);
+    return upstream && modelsAreEqual(custom, upstream);
+  });
+}
+
+// Find custom models with ID conflicts (same id but different content)
+function findConflictingCustomModels(upstreamModels, customModels) {
+  const upstreamMap = new Map(upstreamModels.map(m => [m.id, m]));
+  return customModels.filter(custom => {
+    const upstream = upstreamMap.get(custom.id);
+    return upstream && !modelsAreEqual(custom, upstream);
+  });
+}
+
+// Remove exact duplicate models from custom-models.json
 function removeDuplicateCustomModels(customModels, duplicates) {
   const duplicateIds = new Set(duplicates.map(m => m.id));
   return customModels.filter(model => !duplicateIds.has(model.id));
@@ -102,15 +122,16 @@ function formatNumber(num) {
   return num.toString();
 }
 
-// Get input types from modalities
+// Get input types from modalities (includes video support)
 function getInputTypes(modalities) {
   const types = modalities?.input || ['text'];
-  const hasImage = types.includes('image');
-  const hasText = types.includes('text');
+  const labels = [];
 
-  if (hasImage && hasText) return 'Text + Image';
-  if (hasImage) return 'Image';
-  return 'Text';
+  if (types.includes('text')) labels.push('Text');
+  if (types.includes('image')) labels.push('Image');
+  if (types.includes('video')) labels.push('Video');
+
+  return labels.length > 0 ? labels.join(' + ') : 'Text';
 }
 
 
@@ -171,14 +192,18 @@ async function main() {
     const upstreamModels = Object.values(provider.models).filter(m => m.status !== 'deprecated');
     console.log(`Found ${upstreamModels.length} upstream models from API`);
 
+    // Helper function to normalize cost fields on a model
+    function normalizeModelCost(model) {
+      model.cost ??= {};
+      model.cost.input = model.cost.input ?? 0;
+      model.cost.output = model.cost.output ?? 0;
+      model.cost.cache_read = model.cost.cache_read ?? 0;
+      model.cost.cache_write = model.cost.cache_write ?? 0;
+    }
+
     // Normalize cost fields to ensure all fields are present (prevents NaN in pi cost calculations)
     for (const model of upstreamModels) {
-      if (model.cost) {
-        model.cost.input = model.cost.input ?? 0;
-        model.cost.output = model.cost.output ?? 0;
-        model.cost.cache_read = model.cost.cache_read ?? 0;
-        model.cost.cache_write = model.cost.cache_write ?? 0;
-      }
+      normalizeModelCost(model);
     }
 
     // Load existing custom models
@@ -186,29 +211,34 @@ async function main() {
 
     // Normalize cost fields in custom models too
     for (const model of customModels) {
-      if (model.cost) {
-        model.cost.input = model.cost.input ?? 0;
-        model.cost.output = model.cost.output ?? 0;
-        model.cost.cache_read = model.cost.cache_read ?? 0;
-        model.cost.cache_write = model.cost.cache_write ?? 0;
-      }
+      normalizeModelCost(model);
     }
 
-    // Find and remove duplicates from custom-models.json
+    // Find exact duplicates and conflicts
     const duplicates = findDuplicateCustomModels(upstreamModels, customModels);
+    const conflicts = findConflictingCustomModels(upstreamModels, customModels);
+
     if (duplicates.length > 0) {
-      console.log(`Found ${duplicates.length} custom model(s) now available upstream:`);
+      console.log(`Found ${duplicates.length} exact duplicate(s) now available upstream:`);
       for (const dup of duplicates) {
         console.log(`  - ${dup.id} (${dup.name})`);
       }
-      
+
       const cleanedCustomModels = removeDuplicateCustomModels(customModels, duplicates);
       saveModels(CUSTOM_MODELS_PATH, cleanedCustomModels);
       console.log(`✓ Removed ${duplicates.length} duplicate(s) from custom-models.json`);
-      
+
       // Use cleaned list for further processing
       customModels.length = 0;
       customModels.push(...cleanedCustomModels);
+    }
+
+    // Log warnings for conflicts (custom overrides are preserved)
+    if (conflicts.length > 0) {
+      console.log(`\n⚠️  Found ${conflicts.length} custom override(s) with same ID but different content:`);
+      for (const conflict of conflicts) {
+        console.log(`  - ${conflict.id} (${conflict.name}) - preserved as custom override`);
+      }
     }
 
     // Save upstream models to models.json (regular models)

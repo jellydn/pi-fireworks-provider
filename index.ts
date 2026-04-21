@@ -15,8 +15,8 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import regularModels from "./models.json" with { type: "json" };
-import customModels from "./custom-models.json" with { type: "json" };
+import regular from "./models.json" with { type: "json" };
+import custom from "./custom-models.json" with { type: "json" };
 
 // Model data structure from JSON files
 interface JsonModel {
@@ -55,48 +55,33 @@ interface PiModel {
 }
 
 // Transform JSON model to Pi's expected format
-function transformModel(model: JsonModel): PiModel {
-  // Ensure all cost fields are present with defaults (0) to prevent NaN in cost calculations
-  const cost = model.cost ?? {};
+function transformModel(m: JsonModel): PiModel {
+  const c = m.cost ?? {};
   return {
-    id: model.id,
-    name: model.name,
-    reasoning: model.reasoning,
-    input: model.modalities.input,
+    id: m.id,
+    name: m.name,
+    reasoning: m.reasoning,
+    input: m.modalities.input,
     cost: {
-      input: cost.input ?? 0,
-      output: cost.output ?? 0,
-      cacheRead: cost.cache_read ?? 0,
-      cacheWrite: cost.cache_write ?? 0,
+      input: c.input ?? 0,
+      output: c.output ?? 0,
+      cacheRead: c.cache_read ?? 0,
+      cacheWrite: c.cache_write ?? 0,
     },
-    contextWindow: model.limit.context ?? 0,
-    // Use context window as fallback for maxTokens when output limit is null
-    maxTokens: model.limit.output ?? model.limit.context ?? 0,
+    contextWindow: m.limit.context ?? 0,
+    maxTokens: m.limit.output ?? m.limit.context ?? 0,
   };
 }
 
 // Merge regular and custom models (custom takes precedence on ID conflict)
 function mergeModels(regular: JsonModel[], custom: JsonModel[]): PiModel[] {
-  const modelMap = new Map<string, JsonModel>();
-
-  // Add regular models first
-  for (const model of regular) {
-    modelMap.set(model.id, model);
-  }
-
-  // Add/override with custom models
-  for (const model of custom) {
-    modelMap.set(model.id, model);
-  }
-
-  // Transform all models to Pi format
-  return Array.from(modelMap.values()).map(transformModel);
+  const byId = new Map<string, JsonModel>();
+  for (const m of regular) byId.set(m.id, m);
+  for (const m of custom) byId.set(m.id, m);
+  return Array.from(byId.values()).map(transformModel);
 }
 
-const models = mergeModels(
-  regularModels as JsonModel[],
-  customModels as JsonModel[]
-);
+const models = mergeModels(regular, custom);
 
 export default function (pi: ExtensionAPI) {
   pi.registerProvider("fireworks", {

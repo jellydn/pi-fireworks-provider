@@ -61,112 +61,85 @@ function saveModels(filePath, models) {
   console.log(`✓ Saved ${models.length} models to ${path.basename(filePath)}`);
 }
 
-// Deep equality check for model objects
-function modelsAreEqual(modelA, modelB) {
-  return JSON.stringify(modelA) === JSON.stringify(modelB);
+function modelsAreEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
-// Find exact duplicate custom models (same id AND same content)
-function findDuplicateCustomModels(upstreamModels, customModels) {
-  const upstreamMap = new Map(upstreamModels.map(m => [m.id, m]));
-  return customModels.filter(custom => {
-    const upstream = upstreamMap.get(custom.id);
-    return upstream && modelsAreEqual(custom, upstream);
+function findDuplicateCustomModels(upstream, custom) {
+  const byId = new Map(upstream.map(m => [m.id, m]));
+  return custom.filter(m => {
+    const u = byId.get(m.id);
+    return u && modelsAreEqual(m, u);
   });
 }
 
-// Find custom models with ID conflicts (same id but different content)
-function findConflictingCustomModels(upstreamModels, customModels) {
-  const upstreamMap = new Map(upstreamModels.map(m => [m.id, m]));
-  return customModels.filter(custom => {
-    const upstream = upstreamMap.get(custom.id);
-    return upstream && !modelsAreEqual(custom, upstream);
+function findConflictingCustomModels(upstream, custom) {
+  const byId = new Map(upstream.map(m => [m.id, m]));
+  return custom.filter(m => {
+    const u = byId.get(m.id);
+    return u && !modelsAreEqual(m, u);
   });
 }
 
-// Remove exact duplicate models from custom-models.json
-function removeDuplicateCustomModels(customModels, duplicates) {
-  const duplicateIds = new Set(duplicates.map(m => m.id));
-  return customModels.filter(model => !duplicateIds.has(model.id));
+function removeDuplicateCustomModels(custom, duplicates) {
+  const ids = new Set(duplicates.map(m => m.id));
+  return custom.filter(m => !ids.has(m.id));
 }
 
-// Merge upstream and custom models (custom takes precedence on ID conflict)
-function mergeModels(upstreamModels, customModels) {
-  const modelMap = new Map();
-
-  // Add upstream models first
-  for (const model of upstreamModels) {
-    modelMap.set(model.id, model);
-  }
-
-  // Add/override with custom models
-  for (const model of customModels) {
-    modelMap.set(model.id, model);
-  }
-
-  return Array.from(modelMap.values());
+function mergeModels(upstream, custom) {
+  const byId = new Map();
+  for (const m of upstream) byId.set(m.id, m);
+  for (const m of custom) byId.set(m.id, m);
+  return Array.from(byId.values());
 }
 
-// Format cost for display (handles null/undefined)
 function formatCost(cost) {
-  if (cost === null || cost === undefined) return '-';
+  if (cost == null) return '-';
   if (cost === 0) return 'Free';
   return `$${cost.toFixed(2)}`;
 }
 
-// Format number with K/M suffix (handles null/undefined)
 function formatNumber(num) {
-  if (num === null || num === undefined) return '-';
+  if (num == null) return '-';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
-  return num.toString();
+  return String(num);
 }
 
-// Get input types from modalities (includes video support)
 function getInputTypes(modalities) {
-  const types = modalities?.input || ['text'];
+  const types = modalities?.input ?? ['text'];
   const labels = [];
-
   if (types.includes('text')) labels.push('Text');
   if (types.includes('image')) labels.push('Image');
   if (types.includes('video')) labels.push('Video');
-
-  return labels.length > 0 ? labels.join(' + ') : 'Text';
+  return labels.join(' + ') || 'Text';
 }
 
 
-// Generate README model table row
-function generateReadmeRow(model) {
-  const cost = model.cost || {};
-  const limit = model.limit || {};
-
-  return `| ${model.name} | ${getInputTypes(model.modalities)} | ${formatNumber(limit.context)} | ${formatNumber(limit.output)} | ${formatCost(cost.input)} | ${formatCost(cost.output)} |`;
+function generateReadmeRow(m) {
+  const c = m.cost ?? {};
+  const l = m.limit ?? {};
+  return `| ${m.name} | ${getInputTypes(m.modalities)} | ${formatNumber(l.context)} | ${formatNumber(l.output)} | ${formatCost(c.input)} | ${formatCost(c.output)} |`;
 }
 
-// Update README model table
 function updateReadme(models) {
   const readmePath = path.join(process.cwd(), 'README.md');
   let readme = fs.readFileSync(readmePath, 'utf8');
 
-  // Sort models by family and name
-  const sortedModels = [...models].sort((a, b) => {
-    const familyA = a.family || '';
-    const familyB = b.family || '';
-    if (familyA !== familyB) return familyA.localeCompare(familyB);
-    return a.name.localeCompare(b.name);
+  const sorted = [...models].sort((a, b) => {
+    const fa = a.family ?? '';
+    const fb = b.family ?? '';
+    return fa !== fb ? fa.localeCompare(fb) : a.name.localeCompare(b.name);
   });
 
-  // Generate table rows
-  const tableRows = sortedModels.map(generateReadmeRow).join('\n');
-  const newTable = `| Model | Type | Context | Max Tokens | Input Cost | Output Cost |
-|-------|------|---------|------------|------------|-------------|
-${tableRows}`;
+  const rows = sorted.map(generateReadmeRow).join('\n');
+  const table = `| Model | Type | Context | Max Tokens | Input Cost | Output Cost |\n|-------|------|---------|------------|------------|-------------|\n${rows}`;
 
-  // Replace table in README
-  const tableRegex = /\| Model \| Type \| Context \| Max Tokens \| Input Cost \| Output Cost \|[\s\S]*?(?=\n\*Costs are per million)/;
-  readme = readme.replace(tableRegex, newTable);
+  readme = readme.replace(
+    /\| Model \| Type \| Context \| Max Tokens \| Input Cost \| Output Cost \|[\s\S]*?(?=\n\*Costs are per million)/,
+    table
+  );
 
-  // Update model count in features
   readme = readme.replace(/\*\*\d+\+ AI Models\*\*/, `**${models.length}+ AI Models**`);
 
   fs.writeFileSync(readmePath, readme);
@@ -192,26 +165,22 @@ async function main() {
     const upstreamModels = Object.values(provider.models).filter(m => m.status !== 'deprecated');
     console.log(`Found ${upstreamModels.length} upstream models from API`);
 
-    // Helper function to normalize cost fields on a model
-    function normalizeModelCost(model) {
-      model.cost ??= {};
-      model.cost.input = model.cost.input ?? 0;
-      model.cost.output = model.cost.output ?? 0;
-      model.cost.cache_read = model.cost.cache_read ?? 0;
-      model.cost.cache_write = model.cost.cache_write ?? 0;
-    }
-
-    // Normalize cost fields to ensure all fields are present (prevents NaN in pi cost calculations)
-    for (const model of upstreamModels) {
-      normalizeModelCost(model);
-    }
-
-    // Load existing custom models
     const customModels = loadModels(CUSTOM_MODELS_PATH);
 
-    // Normalize cost fields in custom models too
-    for (const model of customModels) {
-      normalizeModelCost(model);
+    // Ensure all cost fields exist (prevents NaN in pi cost calculations)
+    for (const m of upstreamModels) {
+      m.cost ??= {};
+      m.cost.input ??= 0;
+      m.cost.output ??= 0;
+      m.cost.cache_read ??= 0;
+      m.cost.cache_write ??= 0;
+    }
+    for (const m of customModels) {
+      m.cost ??= {};
+      m.cost.input ??= 0;
+      m.cost.output ??= 0;
+      m.cost.cache_read ??= 0;
+      m.cost.cache_write ??= 0;
     }
 
     // Find exact duplicates and conflicts
@@ -219,18 +188,13 @@ async function main() {
     const conflicts = findConflictingCustomModels(upstreamModels, customModels);
 
     if (duplicates.length > 0) {
-      console.log(`Found ${duplicates.length} exact duplicate(s) now available upstream:`);
+      console.log(`Found ${duplicates.length} duplicate(s) now available upstream:`);
       for (const dup of duplicates) {
         console.log(`  - ${dup.id} (${dup.name})`);
       }
-
-      const cleanedCustomModels = removeDuplicateCustomModels(customModels, duplicates);
-      saveModels(CUSTOM_MODELS_PATH, cleanedCustomModels);
-      console.log(`✓ Removed ${duplicates.length} duplicate(s) from custom-models.json`);
-
-      // Use cleaned list for further processing
-      customModels.length = 0;
-      customModels.push(...cleanedCustomModels);
+      const cleaned = removeDuplicateCustomModels(customModels, duplicates);
+      saveModels(CUSTOM_MODELS_PATH, cleaned);
+      customModels = cleaned;
     }
 
     // Log warnings for conflicts (custom overrides are preserved)

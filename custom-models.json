@@ -4,9 +4,7 @@
     "name": "GLM 5.1 Fast (firepass)",
     "reasoning": true,
     "modalities": {
-      "input": [
-        "text"
-      ]
+      "input": ["text"]
     },
     "cost": {
       "input": 1.4,
@@ -24,9 +22,7 @@
     "name": "MiniMax M2.7 (firepass)",
     "reasoning": true,
     "modalities": {
-      "input": [
-        "text"
-      ]
+      "input": ["text"]
     },
     "cost": {
       "input": 0.3,
@@ -44,9 +40,7 @@
     "name": "GLM 5 Fast",
     "reasoning": true,
     "modalities": {
-      "input": [
-        "text"
-      ]
+      "input": ["text"]
     },
     "cost": {
       "input": 1,
@@ -64,10 +58,7 @@
     "name": "Gemma 4 31B IT",
     "reasoning": true,
     "modalities": {
-      "input": [
-        "text",
-        "image"
-      ]
+      "input": ["text", "image"]
     },
     "cost": {
       "input": 0,
@@ -85,10 +76,7 @@
     "name": "Gemma 4 26B A4B IT",
     "reasoning": true,
     "modalities": {
-      "input": [
-        "text",
-        "image"
-      ]
+      "input": ["text", "image"]
     },
     "cost": {
       "input": 0,

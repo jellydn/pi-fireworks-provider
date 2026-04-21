@@ -13,12 +13,8 @@
     "release_date": "2026-04-01",
     "last_updated": "2026-04-01",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -47,12 +43,8 @@
     "release_date": "2025-12-01",
     "last_updated": "2025-12-01",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -80,12 +72,8 @@
     "release_date": "2026-02-12",
     "last_updated": "2026-02-12",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -111,12 +99,8 @@
     "release_date": "2025-08-01",
     "last_updated": "2025-08-01",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -144,12 +128,8 @@
     "release_date": "2026-02-11",
     "last_updated": "2026-02-11",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -175,12 +155,8 @@
     "release_date": "2025-08-21",
     "last_updated": "2025-08-21",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -206,12 +182,8 @@
     "release_date": "2025-07-11",
     "last_updated": "2025-07-11",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -236,13 +208,8 @@
     "release_date": "2026-04-04",
     "last_updated": "2026-04-04",
     "modalities": {
-      "input": [
-        "text",
-        "image"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text", "image"],
+      "output": ["text"]
     },
     "open_weights": false,
     "cost": {
@@ -270,12 +237,8 @@
     "release_date": "2025-12-23",
     "last_updated": "2025-12-23",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -303,12 +266,8 @@
     "release_date": "2026-04-12",
     "last_updated": "2026-04-12",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -337,12 +296,8 @@
     "release_date": "2025-12-22",
     "last_updated": "2025-12-22",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -371,12 +326,8 @@
     "release_date": "2025-07-29",
     "last_updated": "2025-07-29",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -405,14 +356,8 @@
     "release_date": "2026-01-27",
     "last_updated": "2026-01-27",
     "modalities": {
-      "input": [
-        "text",
-        "image",
-        "video"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text", "image", "video"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -437,12 +382,8 @@
     "release_date": "2025-08-05",
     "last_updated": "2025-08-05",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -467,12 +408,8 @@
     "release_date": "2025-08-05",
     "last_updated": "2025-08-05",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -500,12 +437,8 @@
     "release_date": "2025-11-06",
     "last_updated": "2025-11-06",
     "modalities": {
-      "input": [
-        "text"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {
@@ -534,13 +467,8 @@
     "release_date": "2026-01-27",
     "last_updated": "2026-01-27",
     "modalities": {
-      "input": [
-        "text",
-        "image"
-      ],
-      "output": [
-        "text"
-      ]
+      "input": ["text", "image"],
+      "output": ["text"]
     },
     "open_weights": true,
     "cost": {

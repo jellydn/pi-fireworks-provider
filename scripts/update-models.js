@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-
+// @ts-check
 /**
  * Script to update fireworks models from models.dev API
- * Updates both index.ts and README.md
+ * Updates models.json (regular models) and README.md
+ * Custom models are maintained separately in custom-models.json
  */
 
 import https from 'https';
@@ -15,17 +16,45 @@ const __dirname = path.dirname(__filename);
 
 const API_URL = 'https://models.dev/api.json';
 const PROVIDER_ID = 'fireworks-ai';
+const MODELS_PATH = path.join(__dirname, '..', 'models.json');
+const CUSTOM_MODELS_PATH = path.join(__dirname, '..', 'custom-models.json');
+
+/**
+ * @typedef {Object} ModelCost
+ * @property {number} [input]
+ * @property {number} [output]
+ * @property {number} [cache_read]
+ * @property {number} [cache_write]
+ */
+
+/**
+ * @typedef {Object} ModelLimit
+ * @property {number|null} [context]
+ * @property {number|null} [output]
+ */
+
+/**
+ * @typedef {Object} Model
+ * @property {string} id
+ * @property {string} name
+ * @property {string} [status]
+ * @property {string} [family]
+ * @property {ModelCost} [cost]
+ * @property {ModelLimit} [limit]
+ * @property {{input?: string[]}} [modalities]
+ */
 
 // Fetch JSON from URL
+/** @param {string} url */
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', (/** @type {string} */ chunk) => data += chunk);
       res.on('end', () => {
         try {
           resolve(JSON.parse(data));
-        } catch (e) {
+        } catch (/** @type {any} */ e) {
           reject(new Error(`Failed to parse JSON: ${e.message}`));
         }
       });
@@ -33,120 +62,121 @@ function fetchJSON(url) {
   });
 }
 
-// Format cost for display
+// Load models from JSON file
+/** @param {string} filePath */
+function loadModels(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return [];
+  }
+
+  try {
+    const data = fs.readFileSync(filePath, 'utf8');
+    const models = JSON.parse(data);
+    if (!Array.isArray(models)) {
+      throw new Error('Expected a JSON array');
+    }
+    console.log(`✓ Loaded ${models.length} models from ${path.basename(filePath)}`);
+    return models;
+  } catch (/** @type {any} */ error) {
+    throw new Error(`Could not load ${path.basename(filePath)}: ${error.message}`);
+  }
+}
+
+// Save models to JSON file
+/** @param {string} filePath */
+function saveModels(filePath, /** @type {Model[]} */ models) {
+  fs.writeFileSync(filePath, JSON.stringify(models, null, 2) + '\n');
+  console.log(`✓ Saved ${models.length} models to ${path.basename(filePath)}`);
+}
+
+/** @param {any} a @param {any} b */
+function modelsAreEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** @param {Model[]} upstream @param {Model[]} custom */
+function findDuplicateCustomModels(upstream, custom) {
+  const byId = new Map(upstream.map(m => [m.id, m]));
+  return custom.filter(m => {
+    const u = byId.get(m.id);
+    return u && modelsAreEqual(m, u);
+  });
+}
+
+/** @param {Model[]} upstream @param {Model[]} custom */
+function findConflictingCustomModels(upstream, custom) {
+  const byId = new Map(upstream.map(m => [m.id, m]));
+  return custom.filter(m => {
+    const u = byId.get(m.id);
+    return u && !modelsAreEqual(m, u);
+  });
+}
+
+/** @param {Model[]} custom @param {Model[]} duplicates */
+function removeDuplicateCustomModels(custom, duplicates) {
+  const ids = new Set(duplicates.map(m => m.id));
+  return custom.filter(m => !ids.has(m.id));
+}
+
+/** @param {Model[]} upstream @param {Model[]} custom */
+function mergeModels(upstream, custom) {
+  const byId = new Map();
+  for (const m of upstream) byId.set(m.id, m);
+  for (const m of custom) byId.set(m.id, m);
+  return Array.from(byId.values());
+}
+
+/** @param {number|null|undefined} cost */
 function formatCost(cost) {
+  if (cost == null) return '-';
   if (cost === 0) return 'Free';
   return `$${cost.toFixed(2)}`;
 }
 
-// Format number with K/M suffix
+/** @param {number|null|undefined} num */
 function formatNumber(num) {
+  if (num == null) return '-';
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
-  return num.toString();
+  return String(num);
 }
 
-// Get input types from modalities
+/** @param {{input?: string[]}|undefined} modalities */
 function getInputTypes(modalities) {
-  const types = modalities?.input || ['text'];
-  const hasImage = types.includes('image');
-  const hasText = types.includes('text');
-
-  if (hasImage && hasText) return 'Text + Image';
-  if (hasImage) return 'Image';
-  return 'Text';
+  const types = modalities?.input ?? ['text'];
+  const labels = [];
+  if (types.includes('text')) labels.push('Text');
+  if (types.includes('image')) labels.push('Image');
+  if (types.includes('video')) labels.push('Video');
+  return labels.join(' + ') || 'Text';
 }
 
-// Generate model entry for index.ts
-function generateModelEntry(model) {
-  const inputTypes = model.modalities?.input || ['text'];
-  const cost = model.cost || {};
-  const limit = model.limit || {};
-
-  return `{
-			id: "${model.id}",
-			name: "${model.name}",
-			reasoning: ${model.reasoning || false},
-			input: ${JSON.stringify(inputTypes)},
-			cost: {
-				input: ${cost.input || 0},
-				output: ${cost.output || 0},
-				cacheRead: ${cost.cache_read || 0},
-				cacheWrite: ${cost.cache_write || 0},
-			},
-			contextWindow: ${limit.context || 0},
-			maxTokens: ${limit.output || 0},
-		}`;
+/** @param {Model} m */
+function generateReadmeRow(m) {
+  const c = m.cost ?? {};
+  const l = m.limit ?? {};
+  return `| ${m.name} | ${getInputTypes(m.modalities)} | ${formatNumber(l.context)} | ${formatNumber(l.output)} | ${formatCost(c.input)} | ${formatCost(c.output)} |`;
 }
 
-// Generate index.ts content
-function generateIndexTS(models) {
-  const modelEntries = models.map(m => '\t\t' + generateModelEntry(m)).join(',\n');
-
-  return `/**
- * Fireworks Provider Extension
- *
- * Registers Fireworks as a custom provider using the openai-completions API.
- * Base URL: https://api.fireworks.ai/inference/v1
- *
- * Usage:
- *   # Set your API key
- *   export FIREWORKS_API_KEY=your-api-key
- *
- *   # Run pi with the extension
- *   pi -e /path/to/pi-fireworks-provider
- *
- * Then use /model to select from available models
- */
-
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-
-export default function (pi: ExtensionAPI) {
-	pi.registerProvider("fireworks", {
-		baseUrl: "https://api.fireworks.ai/inference/v1",
-		apiKey: "FIREWORKS_API_KEY",
-		api: "openai-completions",
-
-		models: [
-${modelEntries}
-		],
-	});
-}
-`;
-}
-
-// Generate README model table row
-function generateReadmeRow(model) {
-  const cost = model.cost || {};
-  const limit = model.limit || {};
-
-  return `| ${model.name} | ${getInputTypes(model.modalities)} | ${formatNumber(limit.context || 0)} | ${formatNumber(limit.output || 0)} | ${formatCost(cost.input || 0)} | ${formatCost(cost.output || 0)} |`;
-}
-
-// Update README model table
+/** @param {Model[]} models */
 function updateReadme(models) {
   const readmePath = path.join(process.cwd(), 'README.md');
   let readme = fs.readFileSync(readmePath, 'utf8');
 
-  // Sort models by family and name
-  const sortedModels = [...models].sort((a, b) => {
-    const familyA = a.family || '';
-    const familyB = b.family || '';
-    if (familyA !== familyB) return familyA.localeCompare(familyB);
-    return a.name.localeCompare(b.name);
+  const sorted = [...models].sort((a, b) => {
+    const fa = a.family ?? '';
+    const fb = b.family ?? '';
+    return fa !== fb ? fa.localeCompare(fb) : a.name.localeCompare(b.name);
   });
 
-  // Generate table rows
-  const tableRows = sortedModels.map(generateReadmeRow).join('\n');
-  const newTable = `| Model | Type | Context | Max Tokens | Input Cost | Output Cost |
-|-------|------|---------|------------|------------|-------------|
-${tableRows}`;
+  const rows = sorted.map(generateReadmeRow).join('\n');
+  const table = `| Model | Type | Context | Max Tokens | Input Cost | Output Cost |\n|-------|------|---------|------------|------------|-------------|\n${rows}`;
 
-  // Replace table in README
-  const tableRegex = /\| Model \| Type \| Context \| Max Tokens \| Input Cost \| Output Cost \|[\s\S]*?(?=\n\*Costs are per million)/;
-  readme = readme.replace(tableRegex, newTable);
+  readme = readme.replace(
+    /\| Model \| Type \| Context \| Max Tokens \| Input Cost \| Output Cost \|[\s\S]*?(?=\n\*Costs are per million)/,
+    table
+  );
 
-  // Update model count in features
   readme = readme.replace(/\*\*\d+\+ AI Models\*\*/, `**${models.length}+ AI Models**`);
 
   fs.writeFileSync(readmePath, readme);
@@ -169,20 +199,87 @@ async function main() {
     }
 
     // Convert models object to array and filter out deprecated
-    const models = Object.values(provider.models).filter(m => m.status !== 'deprecated');
+    const upstreamModels = Object.values(provider.models).filter(m => m.status !== 'deprecated');
+    console.log(`Found ${upstreamModels.length} upstream models from API`);
 
-    console.log(`Found ${models.length} active models`);
+    let customModels = loadModels(CUSTOM_MODELS_PATH);
 
-    // Generate and write index.ts
-    const indexContent = generateIndexTS(models);
-    fs.writeFileSync(path.join(process.cwd(), 'index.ts'), indexContent);
-    console.log('✓ Updated index.ts');
+    // Helper to normalize cost fields on a model; returns true if changes were made
+    /** @param {Model} m */
+    function normalizeModelCost(m) {
+      let changed = false;
+      if (m.cost == null) {
+        m.cost = {};
+        changed = true;
+      }
+      if (m.cost.input == null) {
+        m.cost.input = 0;
+        changed = true;
+      }
+      if (m.cost.output == null) {
+        m.cost.output = 0;
+        changed = true;
+      }
+      if (m.cost.cache_read == null) {
+        m.cost.cache_read = 0;
+        changed = true;
+      }
+      if (m.cost.cache_write == null) {
+        m.cost.cache_write = 0;
+        changed = true;
+      }
+      return changed;
+    }
 
-    // Update README
-    updateReadme(models);
+    // Ensure all cost fields exist (prevents NaN in pi cost calculations)
+    for (const m of upstreamModels) {
+      normalizeModelCost(m);
+    }
+    let customModelsChanged = false;
+    for (const m of customModels) {
+      if (normalizeModelCost(m)) {
+        customModelsChanged = true;
+      }
+    }
 
+    // Find exact duplicates and conflicts
+    const duplicates = findDuplicateCustomModels(upstreamModels, customModels);
+    const conflicts = findConflictingCustomModels(upstreamModels, customModels);
+
+    if (duplicates.length > 0) {
+      console.log(`Found ${duplicates.length} duplicate(s) now available upstream:`);
+      for (const dup of duplicates) {
+        console.log(`  - ${dup.id} (${dup.name})`);
+      }
+      const cleaned = removeDuplicateCustomModels(customModels, duplicates);
+      saveModels(CUSTOM_MODELS_PATH, cleaned);
+      customModels = cleaned;
+    }
+
+    // Log warnings for conflicts (custom overrides are preserved)
+    if (conflicts.length > 0) {
+      console.log(`\n⚠️  Found ${conflicts.length} custom override(s) with same ID but different content:`);
+      for (const conflict of conflicts) {
+        console.log(`  - ${conflict.id} (${conflict.name}) - preserved as custom override`);
+      }
+    }
+
+    // Persist normalized custom models if they changed but weren't saved above
+    if (customModelsChanged && duplicates.length === 0) {
+      saveModels(CUSTOM_MODELS_PATH, customModels);
+    }
+
+    // Save upstream models to models.json (regular models)
+    saveModels(MODELS_PATH, upstreamModels);
+
+    // Merge for README update
+    const allModels = mergeModels(upstreamModels, customModels);
+    console.log(`Total: ${allModels.length} models (${upstreamModels.length} regular + ${customModels.length} custom, ${allModels.length - upstreamModels.length} custom overrides)`);
+
+    // Update README with merged models
+    updateReadme(allModels);
     console.log('\nDone!');
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.error('Error:', error.message);
     process.exit(1);
   }

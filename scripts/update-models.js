@@ -205,6 +205,7 @@ async function main() {
     let customModels = loadModels(CUSTOM_MODELS_PATH);
 
     // Helper to normalize cost fields on a model; returns true if changes were made
+    /** @param {Model} m */
     function normalizeModelCost(m) {
       let changed = false;
       if (m.cost == null) {
